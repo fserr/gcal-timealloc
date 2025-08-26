@@ -1,1 +1,1 @@
-# gcal-timealloc
+# TimeAlloc - Retrieve Google Calendar Event Duration
