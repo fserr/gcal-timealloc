@@ -1,4 +1,5 @@
-import datetime
+from datetime import datetime, time, timezone, timedelta, date
+import calendar
 import os.path
 
 from google.auth.transport.requests import Request
@@ -49,46 +50,54 @@ def main():
         
         print("")
         
-        # TODO: "Select calendar ..."
-        calendar_selector = 1
+        
+        calendar_selector = 8       # TODO: "Select calendar: "
 
         # --- GET UPCOMING EVENTS FROM SELECTED CALENDAR ---
         # Constructor for retrieving desired timespan
-        now_utc = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
-        print(now_utc)
-
-        # TODAY
-        if calendar_selector == 1:
-            time_min = now_utc
-            time_max = now_utc
-            return
-        # THIS WEEK
-        elif calendar_selector == 2:
-            time_min = now_utc
-            time_max = now_utc
-            return
-        # THIS MONTH
-        elif calendar_selector == 3:
-            time_min = now_utc
-            time_max = now_utc
-            return
-        # THIS YEAR
-        elif calendar_selector == 4:
-            time_min = now_utc
-            time_max = now_utc
-            return
-        # CUSTOM
-        elif calendar_selector == 5:
-            time_min = now_utc
-            time_max = now_utc
-            return
+        today_utc = datetime.now(timezone.utc).date()
         
+        print("Timespans: ")
+        print("1. Current day")
+        print("2. Current week")
+        print("3. Current month")
+        print("4. Current year")
+        print("5. Custom")
+        
+        timespan_selector = 4       # TODO: "Select timespan (YYYY/MM/DD): "
+        
+        # TODAY
+        if timespan_selector == 1:
+            time_min = datetime.combine(today_utc, time.min, tzinfo=timezone.utc).isoformat()
+            time_max = datetime.combine(today_utc, time.max, tzinfo=timezone.utc).isoformat()
+        # THIS WEEK
+        elif timespan_selector == 2:
+            # First day of week = monday
+            week_start_utc = today_utc - timedelta(days=today_utc.weekday())
+            week_end_utc = week_start_utc + timedelta(days=6)
+            time_min = datetime.combine(week_start_utc, time.min, tzinfo=timezone.utc).isoformat()
+            time_max = datetime.combine(week_end_utc, time.max, tzinfo=timezone.utc).isoformat()
+        # THIS MONTH
+        elif timespan_selector == 3:
+            month_start_utc = today_utc.replace(day=1)
+            _, month_end_utc_num = calendar.monthrange(today_utc.year, today_utc.month)
+            month_end_utc = today_utc.replace(day=month_end_utc_num)
+            time_min = datetime.combine(month_start_utc, time.min, tzinfo=timezone.utc).isoformat()
+            time_max = datetime.combine(month_end_utc, time.max, tzinfo=timezone.utc).isoformat()
+        # THIS YEAR
+        elif timespan_selector == 4:
+            year_start_utc = date(today_utc.year, 1, 1)
+            year_end_utc = date(today_utc.year, 12, 31)
+            time_min = datetime.combine(year_start_utc, time.min, tzinfo=timezone.utc).isoformat()
+            time_max = datetime.combine(year_end_utc, time.max, tzinfo=timezone.utc).isoformat()
+        # CUSTOM
+        elif timespan_selector == 5:
+            time_min = datetime.combine(today_utc, time.min, tzinfo=timezone.utc).isoformat()
+            time_max = datetime.combine(today_utc, time.max, tzinfo=timezone.utc).isoformat()
         else:
             print("Invalid option.")
             return
         
-        time_min = now_utc
-        time_max = now_utc
         
         events_result = (
             service.events()
