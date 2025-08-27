@@ -73,28 +73,39 @@ def get_timespan(args):
     today_utc = datetime.now(timezone.utc).date()
     time_min = None
     time_max = None
+    timespan_selector = 0
 
-    # Prioritize command-line arguments
-    if args.day:
+    # If no arguments, use interactive menu
+    if not args.day and not args.week and not args.month and not args.year and not args.custom and not args.start and not args.end:
+        print("\nTIMESPANS:")
+        print("1. Current day")
+        print("2. Current week")
+        print("3. Current month")
+        print("4. Current year")
+        print("5. Custom")
+
+        timespan_selector = int(input("\nSelect a timespan: "))
+    
+    if args.day or timespan_selector == 1:
         time_min = datetime.combine(today_utc, time.min, tzinfo=timezone.utc).isoformat()
         time_max = datetime.combine(today_utc, time.max, tzinfo=timezone.utc).isoformat()
-    elif args.week:
+    elif args.week or timespan_selector == 2:
         week_start_utc = today_utc - timedelta(days=today_utc.weekday())
         week_end_utc = week_start_utc + timedelta(days=6)
         time_min = datetime.combine(week_start_utc, time.min, tzinfo=timezone.utc).isoformat()
         time_max = datetime.combine(week_end_utc, time.max, tzinfo=timezone.utc).isoformat()
-    elif args.month:
+    elif args.month or timespan_selector == 3:
         month_start_utc = today_utc.replace(day=1)
         _, month_end_utc_num = calendar.monthrange(today_utc.year, today_utc.month)
         month_end_utc = today_utc.replace(day=month_end_utc_num)
         time_min = datetime.combine(month_start_utc, time.min, tzinfo=timezone.utc).isoformat()
         time_max = datetime.combine(month_end_utc, time.max, tzinfo=timezone.utc).isoformat()
-    elif args.year:
+    elif args.year or timespan_selector == 4:
         year_start_utc = date(today_utc.year, 1, 1)
         year_end_utc = date(today_utc.year, 12, 31)
         time_min = datetime.combine(year_start_utc, time.min, tzinfo=timezone.utc).isoformat()
         time_max = datetime.combine(year_end_utc, time.max, tzinfo=timezone.utc).isoformat()
-    elif args.custom or (args.start and args.end):
+    elif args.custom or (args.start and args.end) or timespan_selector == 5:
         if args.start and args.end:
             date_start = datetime.strptime(args.start, '%Y-%m-%d').date()
             date_end = datetime.strptime(args.end, '%Y-%m-%d').date()
@@ -104,43 +115,8 @@ def get_timespan(args):
         time_min = datetime.combine(date_start, time.min, tzinfo=timezone.utc).isoformat()
         time_max = datetime.combine(date_end, time.max, tzinfo=timezone.utc).isoformat()
     else:
-        # If no arguments, use interactive menu
-        print("\nTIMESPANS:")
-        print("1. Current day")
-        print("2. Current week")
-        print("3. Current month")
-        print("4. Current year")
-        print("5. Custom")
-
-        timespan_selector = int(input("\nSelect a timespan: "))
-
-        if timespan_selector == 1:
-            time_min = datetime.combine(today_utc, time.min, tzinfo=timezone.utc).isoformat()
-            time_max = datetime.combine(today_utc, time.max, tzinfo=timezone.utc).isoformat()
-        elif timespan_selector == 2:
-            week_start_utc = today_utc - timedelta(days=today_utc.weekday())
-            week_end_utc = week_start_utc + timedelta(days=6)
-            time_min = datetime.combine(week_start_utc, time.min, tzinfo=timezone.utc).isoformat()
-            time_max = datetime.combine(week_end_utc, time.max, tzinfo=timezone.utc).isoformat()
-        elif timespan_selector == 3:
-            month_start_utc = today_utc.replace(day=1)
-            _, month_end_utc_num = calendar.monthrange(today_utc.year, today_utc.month)
-            month_end_utc = today_utc.replace(day=month_end_utc_num)
-            time_min = datetime.combine(month_start_utc, time.min, tzinfo=timezone.utc).isoformat()
-            time_max = datetime.combine(month_end_utc, time.max, tzinfo=timezone.utc).isoformat()
-        elif timespan_selector == 4:
-            year_start_utc = date(today_utc.year, 1, 1)
-            year_end_utc = date(today_utc.year, 12, 31)
-            time_min = datetime.combine(year_start_utc, time.min, tzinfo=timezone.utc).isoformat()
-            time_max = datetime.combine(year_end_utc, time.max, tzinfo=timezone.utc).isoformat()
-        elif timespan_selector == 5:
-            date_start = datetime.strptime(input("Enter first day (YYYY-MM-DD): "), '%Y-%m-%d').date()
-            date_end = datetime.strptime(input("Enter last day (YYYY-MM-DD): "), '%Y-%m-%d').date()
-            time_min = datetime.combine(date_start, time.min, tzinfo=timezone.utc).isoformat()
-            time_max = datetime.combine(date_end, time.max, tzinfo=timezone.utc).isoformat()
-        else:
-            print("Invalid option.")
-            return None, None
+        print("Invalid option.")
+        return None, None
 
     return time_min, time_max
 
