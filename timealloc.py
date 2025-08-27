@@ -1,6 +1,9 @@
+#!/usr/bin/env python3
+
 from datetime import datetime, time, timezone, timedelta, date
 import calendar
 import os.path
+import argparse
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -13,13 +16,6 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 
 def get_duration_seconds(event) -> float:
-    """
-    Calculates and formats the duration of a timed Google Calendar event.
-    Args:
-        event: A single event resource dictionary from the API.
-    Returns:
-        A formatted string like "X hours and Y min", or None for all-day events.
-    """
     # We only process events with specific start and end times ('dateTime')
     if 'dateTime' not in event['start'] or 'dateTime' not in event['end']:
         return 0 # This is an all-day event
@@ -51,8 +47,7 @@ def get_formatted_duration(total_seconds):
         return "0 min" # For events with no duration
 
 
-def main():
-    # --- AUTH ---
+def get_google_credentials():
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -71,6 +66,21 @@ def main():
         # Save the credentials for the next run
         with open("token.json", "w") as token:
             token.write(creds.to_json())
+    return creds
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Calculate total time spent in Google Calendar events.")
+    parser.add_argument("-d", "--day", action="store_true", help="Get current day events duration")
+    parser.add_argument("-w", "--week", action="store_true", help="Get current week events duration")
+    parser.add_argument("-m", "--month", action="store_true", help="Get current month events duration")
+    parser.add_argument("-y", "--year", action="store_true", help="Get current year events duration")
+    parser.add_argument("-c", "--custom", action="store_true", help="Select a custom timespan")
+    parser.add_argument("--start", type=str, help="Start date for custom timespan (YYYY-MM-DD)")
+    parser.add_argument("--end", type=str, help="End date for custom timespan (YYYY-MM-DD)")
+    args = parser.parse_args()
+    
+    creds = get_google_credentials()
 
     try:
         service = build("calendar", "v3", credentials=creds)
@@ -81,7 +91,7 @@ def main():
 
         calendars_id_map = {}
         cal_selector_constructor = 0
-        print("Calendars:")
+        print("CALENDARS:")
         for cal in calendars:
             cal_selector_constructor += 1
             calendars_id_map[cal_selector_constructor] = cal["id"]
@@ -90,20 +100,22 @@ def main():
         print("")
         
         
-        calendar_selector = 6       # TODO: "Select calendar: "
+        calendar_selector = 6       
+        calendar_selector = int(input("Select a calendar: "))
 
         # --- GET UPCOMING EVENTS FROM SELECTED CALENDAR ---
         # Constructor for retrieving desired timespan
         today_utc = datetime.now(timezone.utc).date()
         
-        print("Timespans: ")
+        print("\nTIMESPANS:")
         print("1. Current day")
         print("2. Current week")
         print("3. Current month")
         print("4. Current year")
         print("5. Custom")
         
-        timespan_selector = 4       # TODO: "Select timespan (YYYY/MM/DD): "
+        # timespan_selector = 4           
+        timespan_selector = int(input("\nSelect a timespan: "))
         
         # TODAY
         if timespan_selector == 1:
@@ -131,8 +143,10 @@ def main():
             time_max = datetime.combine(year_end_utc, time.max, tzinfo=timezone.utc).isoformat()
         # CUSTOM
         elif timespan_selector == 5:
-            time_min = datetime.combine(today_utc, time.min, tzinfo=timezone.utc).isoformat()
-            time_max = datetime.combine(today_utc, time.max, tzinfo=timezone.utc).isoformat()
+            date_start = datetime.strptime(input("Enter first day (YYYY-MM-DD): "), '%Y-%m-%d').date()
+            date_end = datetime.strptime(input("Enter last day (YYYY-MM-DD): "), '%Y-%m-%d').date()
+            time_min = datetime.combine(date_start, time.min, tzinfo=timezone.utc).isoformat()
+            time_max = datetime.combine(date_end, time.max, tzinfo=timezone.utc).isoformat()
         else:
             print("Invalid option.")
             return
@@ -156,10 +170,11 @@ def main():
             return
         
         # TODO: Print total duration
+        print("")
         total_seconds = 0.0
         for event in events:
             total_seconds = total_seconds + get_duration_seconds(event)
-        print(get_formatted_duration(total_seconds))
+        print(f"TOTAL EVENTS DURATION: {get_formatted_duration(total_seconds)}")
 
     except HttpError as error:
         print(f"An error occurred: {error}")
