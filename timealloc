@@ -99,7 +99,7 @@ def get_timespan(args):
     timespan_selector = 0
 
     # If no arguments, use interactive menu
-    if not args.day and not args.week and not args.month and not args.year and not args.custom and not args.start and not args.end:
+    if not args.day and not args.week and not args.month and not args.year and not args.start and not args.end:
         print("\nTIMESPANS:")
         print("1. Current day")
         print("2. Current week")
