@@ -3,7 +3,7 @@
 
 **TimeAlloc** is a command-line tool that connects to your Google Calendar account to calculate the total time spent in events for a selected calendar and timeframe. You can run it interactively or use command-line arguments for quick calculations.
 
-## Features
+## Overview
 
 * **Secure Google Account Authentication:** Uses OAuth 2.0 to securely access your calendar data.
 * **Multiple Calendar Support:** Automatically lists all your available Google Calendars for you to choose from.
@@ -13,15 +13,13 @@
 
 ## Requirements
 
-Before you begin, ensure you have Python 3 installed on your system. The following Python packages are required:
+Ensure you have Python 3 installed on your system. The following Python packages are required (and provided by the requirments.txt file):
 
 * `google-api-python-client`
 * `google-auth-httplib2`
 * `google-auth-oauthlib`
 
 ## Setup Instructions
-
-Follow these steps to get the tool up and running.
 
 ### 1. Clone the Repository
 First, clone this repository to your local machine:
@@ -62,19 +60,21 @@ export PATH="/path/to/gcal-timealloc:$PATH"
 
 # Then, reload your shell configuration
 source ~/.zshrc
+# OR
+source ~/.bashrc
 ```
 
-After this, you can run the tool by simply typing timealloc.py.
+After this, you can run the tool by simply typing timealloc.
 
 ## How to Use
 
 ### First Run: Authentication
-The first time you run the script, a browser window will open asking you to log in to your Google account and grant permission for the application to read your calendar data. After you approve, a `token.json` file will be created in the project directory. This file stores your authentication tokens so you won't have to log in every time.
+The first time you run the script, a browser window will open asking you to log in to your Google account and grant permission for the application to read your calendar data. After you approve, a `token.json` file will be created in the `~/.config/timealloc` directory (which will be created if not existent). This file stores your authentication tokens so you won't have to log in every time.
 
 ### Interactive Mode
 To use the script interactively, run it without any arguments:
 ```bash
-./timealloc.py
+timealloc
 ```
 
 You will be prompted to select a calendar and a timespan from a menu.
@@ -92,9 +92,10 @@ You will be prompted to select a calendar and a timespan from a menu.
 - `-y`, `--year`: Get the total duration for the current year.
   - Example: `./timealloc.py -y`
 
-- `-c`, `--custom`: Interactively enter a custom start and end date.
-  - Example: `./timealloc.py -c`
-
 - `--start` & `--end`: Specify a custom date range directly.
-  - Example: `./timealloc.py --start 2025-01-01 --end 2025-01-31`
+  - Example: `./timealloc.py --start='2025-01-01' --end='2025-01-31'`
+
+- `--id`: Select the desired calendar by its ID.
+  - Example: `./timealloc.py --id='1234@group.calendar.google.com'`
+
 ```
