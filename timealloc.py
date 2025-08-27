@@ -12,6 +12,45 @@ from googleapiclient.errors import HttpError
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 
+def get_duration_seconds(event) -> float:
+    """
+    Calculates and formats the duration of a timed Google Calendar event.
+    Args:
+        event: A single event resource dictionary from the API.
+    Returns:
+        A formatted string like "X hours and Y min", or None for all-day events.
+    """
+    # We only process events with specific start and end times ('dateTime')
+    if 'dateTime' not in event['start'] or 'dateTime' not in event['end']:
+        return 0 # This is an all-day event
+
+    # Parse the ISO 8601 timestamps into datetime objects
+    start_time = datetime.fromisoformat(event['start']['dateTime'])
+    end_time = datetime.fromisoformat(event['end']['dateTime'])
+
+    # The difference is a timedelta object
+    duration = end_time - start_time
+
+    # Calculate total hours and remaining minutes
+    total_seconds = duration.total_seconds()
+    return total_seconds
+    
+    
+def get_formatted_duration(total_seconds):
+    hours = int(total_seconds // 3600)
+    minutes = int((total_seconds % 3600) // 60)
+
+    # Apply the specific formatting rules
+    if hours > 0 and minutes > 0:
+        return f"{hours} hours and {minutes} min"
+    elif hours > 0:
+        return f"{hours} hours"
+    elif minutes > 0:
+        return f"{minutes} min"
+    else:
+        return "0 min" # For events with no duration
+
+
 def main():
     # --- AUTH ---
     creds = None
@@ -51,7 +90,7 @@ def main():
         print("")
         
         
-        calendar_selector = 8       # TODO: "Select calendar: "
+        calendar_selector = 6       # TODO: "Select calendar: "
 
         # --- GET UPCOMING EVENTS FROM SELECTED CALENDAR ---
         # Constructor for retrieving desired timespan
@@ -113,13 +152,14 @@ def main():
         events = events_result.get("items", [])
 
         if not events:
-            print("No upcoming events found.")
+            print("No events found.")
             return
         
-        # Prints the start and name of the next 10 events
+        # TODO: Print total duration
+        total_seconds = 0.0
         for event in events:
-            start = event["start"].get("dateTime", event["start"].get("date"))
-            print(start, event["summary"])
+            total_seconds = total_seconds + get_duration_seconds(event)
+        print(get_formatted_duration(total_seconds))
 
     except HttpError as error:
         print(f"An error occurred: {error}")
