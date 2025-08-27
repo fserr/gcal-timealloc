@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+
+from datetime import datetime, time, timezone, timedelta, date
+from pathlib import Path
+import shutil
+import calendar
+import os.path
+import argparse
+
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+# If modifying these scopes, delete the file token.json.
+SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+
+
+def get_duration_seconds(event) -> float:
+    # We only process events with specific start and end times ('dateTime')
+    if 'dateTime' not in event['start'] or 'dateTime' not in event['end']:
+        return 0 # This is an all-day event
+
+    # Parse the ISO 8601 timestamps into datetime objects
+    start_time = datetime.fromisoformat(event['start']['dateTime'])
+    end_time = datetime.fromisoformat(event['end']['dateTime'])
+
+    # The difference is a timedelta object
+    duration = end_time - start_time
+
+    # Calculate total hours and remaining minutes
+    total_seconds = duration.total_seconds()
+    return total_seconds
+    
+    
+def get_formatted_duration(total_seconds):
+    hours = int(total_seconds // 3600)
+    minutes = int((total_seconds % 3600) // 60)
+
+    # Apply the specific formatting rules
+    if hours > 0 and minutes > 0:
+        return f"{hours} hours and {minutes} min"
+    elif hours > 0:
+        return f"{hours} hours"
+    elif minutes > 0:
+        return f"{minutes} min"
+    else:
+        return "0 min" # For events with no duration
+
+
+def get_google_credentials():
+    creds = None
+    home_dir = Path.home()
+    config_dir = home_dir / ".config/timealloc"
+    token_path = config_dir / "token.json"
+    credentials_path = config_dir / "credentials.json"
+    
+    if not credentials_path.exists():
+        source_credentials_path = Path("credentials.json")
+        
+        # Check if credentials.json exists in the current directory
+        if source_credentials_path.exists():
+            print(f"Found '{source_credentials_path}' in the current directory.")
+            config_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy(source_credentials_path, credentials_path)
+            print(f"Successfully copied credentials to '{credentials_path}'")
+        else:
+            return "'credentials.json' file not found in the current directory"
+        
+    
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+        
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                credentials_path, SCOPES
+            )
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open(token_path, "w") as token:
+            token.write(creds.to_json())
+    return creds
+
+
+def get_timespan(args):
+    today_utc = datetime.now(timezone.utc).date()
+    time_min = None
+    time_max = None
+    timespan_selector = 0
+
+    # If no arguments, use interactive menu
+    if not args.day and not args.week and not args.month and not args.year and not args.custom and not args.start and not args.end:
+        print("\nTIMESPANS:")
+        print("1. Current day")
+        print("2. Current week")
+        print("3. Current month")
+        print("4. Current year")
+        print("5. Custom")
+
+        timespan_selector = int(input("\nSelect a timespan: "))
+    
+    if args.day or timespan_selector == 1:
+        time_min = datetime.combine(today_utc, time.min, tzinfo=timezone.utc).isoformat()
+        time_max = datetime.combine(today_utc, time.max, tzinfo=timezone.utc).isoformat()
+    elif args.week or timespan_selector == 2:
+        week_start_utc = today_utc - timedelta(days=today_utc.weekday())
+        week_end_utc = week_start_utc + timedelta(days=6)
+        time_min = datetime.combine(week_start_utc, time.min, tzinfo=timezone.utc).isoformat()
+        time_max = datetime.combine(week_end_utc, time.max, tzinfo=timezone.utc).isoformat()
+    elif args.month or timespan_selector == 3:
+        month_start_utc = today_utc.replace(day=1)
+        _, month_end_utc_num = calendar.monthrange(today_utc.year, today_utc.month)
+        month_end_utc = today_utc.replace(day=month_end_utc_num)
+        time_min = datetime.combine(month_start_utc, time.min, tzinfo=timezone.utc).isoformat()
+        time_max = datetime.combine(month_end_utc, time.max, tzinfo=timezone.utc).isoformat()
+    elif args.year or timespan_selector == 4:
+        year_start_utc = date(today_utc.year, 1, 1)
+        year_end_utc = date(today_utc.year, 12, 31)
+        time_min = datetime.combine(year_start_utc, time.min, tzinfo=timezone.utc).isoformat()
+        time_max = datetime.combine(year_end_utc, time.max, tzinfo=timezone.utc).isoformat()
+    elif (args.start and args.end) or timespan_selector == 5:
+        if args.start and args.end:
+            date_start = datetime.strptime(args.start, '%Y-%m-%d').date()
+            date_end = datetime.strptime(args.end, '%Y-%m-%d').date()
+        else:
+            date_start = datetime.strptime(input("Enter first day (YYYY-MM-DD): "), '%Y-%m-%d').date()
+            date_end = datetime.strptime(input("Enter last day (YYYY-MM-DD): "), '%Y-%m-%d').date()
+        time_min = datetime.combine(date_start, time.min, tzinfo=timezone.utc).isoformat()
+        time_max = datetime.combine(date_end, time.max, tzinfo=timezone.utc).isoformat()
+    else:
+        print("Invalid option.")
+        return None, None
+
+    return time_min, time_max
+
+
+def create_parser():
+    parser = argparse.ArgumentParser(description="Calculate total time spent in Google Calendar events.")
+    parser.add_argument("-d", "--day", action="store_true", help="Get current day events duration")
+    parser.add_argument("-w", "--week", action="store_true", help="Get current week events duration")
+    parser.add_argument("-m", "--month", action="store_true", help="Get current month events duration")
+    parser.add_argument("-y", "--year", action="store_true", help="Get current year events duration")
+    parser.add_argument("--start", type=str, help="Start date for custom timespan (--start='<YYYY-MM-DD>')")
+    parser.add_argument("--end", type=str, help="End date for custom timespan (--end='<YYYY-MM-DD>')")
+    parser.add_argument("--id", type=str, help="Select calendar by calendar ID (--id='<ID>')")
+    args = parser.parse_args()
+    
+    return args
+
+
+def main():
+    creds = get_google_credentials()
+    args = create_parser()
+
+    try:
+        service = build("calendar", "v3", credentials=creds)
+
+        # --- GET CALENDARS ---
+        calendars_result = service.calendarList().list().execute()
+        calendars = calendars_result.get("items", [])
+
+        calendars_id_map = {}
+        cal_selector_constructor = 0
+
+        if args.id:
+            calendar_id = args.id
+        else:
+            print("CALENDARS:")
+            for cal in calendars:
+                cal_selector_constructor += 1
+                calendars_id_map[cal_selector_constructor] = cal["id"]
+                print(f"{cal_selector_constructor}. {cal['summary']}")
+            print("")
+            
+            try:
+                calendar_selector = int(input("Select a calendar: "))
+                if calendar_selector not in calendars_id_map:
+                    print("Invalid calendar selection")
+                    return
+                else:
+                    calendar_id = calendars_id_map[calendar_selector]
+            except ValueError:
+                print("Please enter a valid number")
+                return
+
+        # Constructor for retrieving desired timespan
+        time_min, time_max = get_timespan(args)
+        
+        if not time_min or not time_max:
+            return
+        
+        events_result = (
+            service.events()
+            .list(
+                calendarId=calendar_id,
+                timeMin=time_min,
+                timeMax=time_max,
+                singleEvents=True,
+                orderBy="startTime",
+            )
+            .execute()
+        )
+        events = events_result.get("items", [])
+
+        if not events:
+            print("No events found.")
+            return
+        
+        # Print total duration
+        print("---")
+        total_seconds = 0.0
+        for event in events:
+            total_seconds = total_seconds + get_duration_seconds(event)
+        print(f"TOTAL EVENTS DURATION:\n {get_formatted_duration(total_seconds)}")
+
+    except HttpError as error:
+        if error.resp.status == 404:
+            print("Calendar not found")
+        elif error.resp.status == 401:
+            print("Authentication failed. Please delete token.json and re-authenticate")
+        else:
+            print(f"An error occurred: {error}")
+
+if __name__ == "__main__":
+    main()
