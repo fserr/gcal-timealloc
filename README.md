@@ -26,6 +26,76 @@ Follow these steps to get the tool up and running.
 
 ### 1. Clone the Repository
 First, clone this repository to your local machine:
-```bash
+```zsh
 git clone <your-repository-url>
 cd gcal-timealloc
+```
+
+### 2. Set Up Google API Credentials
+This tool requires API credentials to access the Google Calendar API.
+
+1.  Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2.  Create a new project.
+3.  From the navigation menu, go to **APIs & Services > Library** and enable the **Google Calendar API**.
+4.  Go to **APIs & Services > Credentials**.
+5.  Click **Create Credentials > OAuth client ID**.
+6.  Select **Desktop app** as the application type.
+7.  Click **Create**, then click **Download JSON** to download your credentials.
+8.  **Rename the downloaded file to `credentials.json`** and place it in the root directory of this project.
+
+### 3. Install Dependencies
+Install the required Python packages using `pip`:
+```zsh
+pip install -r requirements.txt
+```
+
+### 4. Make the Script Executable
+Give the script execution permissions:
+```zsh
+chmod +x timealloc.py
+```
+
+### 5. (Optional) Add to Your PATH
+For easy access from any directory, you can add the script to your system's PATH.
+```zsh
+# Add this line to your ~/.bashrc, ~/.zshrc, or other shell configuration file
+export PATH="/path/to/gcal-timealloc:$PATH"
+
+# Then, reload your shell configuration
+source ~/.zshrc
+```
+
+After this, you can run the tool by simply typing timealloc.py.
+
+## How to Use 🚀
+
+### First Run: Authentication
+The first time you run the script, a browser window will open asking you to log in to your Google account and grant permission for the application to read your calendar data. After you approve, a `token.json` file will be created in the project directory. This file stores your authentication tokens so you won't have to log in every time.
+
+### Interactive Mode
+To use the script interactively, run it without any arguments:
+```bash
+./timealloc.py
+```
+
+You will be prompted to select a calendar and a timespan from a menu.
+
+### Command-Line Arguments
+- `-d`, `--day`: Get the total duration for the current day.
+  - Example: `./timealloc.py -d`
+
+- `-w`, `--week`: Get the total duration for the current week.
+  - Example: `./timealloc.py -w`
+
+- `-m`, `--month`: Get the total duration for the current month.
+  - Example: `./timealloc.py -m`
+
+- `-y`, `--year`: Get the total duration for the current year.
+  - Example: `./timealloc.py -y`
+
+- `-c`, `--custom`: Interactively enter a custom start and end date.
+  - Example: `./timealloc.py -c`
+
+- `--start` & `--end`: Specify a custom date range directly.
+  - Example: `./timealloc.py --start 2025-01-01 --end 2025-01-31`
+```
