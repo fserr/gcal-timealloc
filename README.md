@@ -47,7 +47,7 @@ pip install -r requirements.txt
 ### 4. Make the Script Executable
 Give the script execution permissions:
 ```zsh
-chmod +x timealloc.py
+chmod +x timealloc
 ```
 
 ### 5. (Optional) Add to Your PATH
@@ -79,21 +79,21 @@ You will be prompted to select a calendar and a timespan from a menu.
 
 ### Command-Line Arguments
 - `-d`, `--day`: Get the total duration for the current day.
-  - Example: `./timealloc.py -d`
+  - Example: `./timealloc -d`
 
 - `-w`, `--week`: Get the total duration for the current week.
-  - Example: `./timealloc.py -w`
+  - Example: `./timealloc -w`
 
 - `-m`, `--month`: Get the total duration for the current month.
-  - Example: `./timealloc.py -m`
+  - Example: `./timealloc -m`
 
 - `-y`, `--year`: Get the total duration for the current year.
-  - Example: `./timealloc.py -y`
+  - Example: `./timealloc -y`
 
 - `--start` & `--end`: Specify a custom date range directly.
-  - Example: `./timealloc.py --start='2025-01-01' --end='2025-01-31'`
+  - Example: `./timealloc --start='2025-01-01' --end='2025-01-31'`
 
 - `--id`: Select the desired calendar by its ID.
-  - Example: `./timealloc.py --id='1234@group.calendar.google.com'`
+  - Example: `./timealloc --id='1234@group.calendar.google.com'`
 
 ```
