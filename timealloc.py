@@ -69,7 +69,83 @@ def get_google_credentials():
     return creds
 
 
-def main():
+def get_timespan(args):
+    today_utc = datetime.now(timezone.utc).date()
+    time_min = None
+    time_max = None
+
+    # Prioritize command-line arguments
+    if args.day:
+        time_min = datetime.combine(today_utc, time.min, tzinfo=timezone.utc).isoformat()
+        time_max = datetime.combine(today_utc, time.max, tzinfo=timezone.utc).isoformat()
+    elif args.week:
+        week_start_utc = today_utc - timedelta(days=today_utc.weekday())
+        week_end_utc = week_start_utc + timedelta(days=6)
+        time_min = datetime.combine(week_start_utc, time.min, tzinfo=timezone.utc).isoformat()
+        time_max = datetime.combine(week_end_utc, time.max, tzinfo=timezone.utc).isoformat()
+    elif args.month:
+        month_start_utc = today_utc.replace(day=1)
+        _, month_end_utc_num = calendar.monthrange(today_utc.year, today_utc.month)
+        month_end_utc = today_utc.replace(day=month_end_utc_num)
+        time_min = datetime.combine(month_start_utc, time.min, tzinfo=timezone.utc).isoformat()
+        time_max = datetime.combine(month_end_utc, time.max, tzinfo=timezone.utc).isoformat()
+    elif args.year:
+        year_start_utc = date(today_utc.year, 1, 1)
+        year_end_utc = date(today_utc.year, 12, 31)
+        time_min = datetime.combine(year_start_utc, time.min, tzinfo=timezone.utc).isoformat()
+        time_max = datetime.combine(year_end_utc, time.max, tzinfo=timezone.utc).isoformat()
+    elif args.custom or (args.start and args.end):
+        if args.start and args.end:
+            date_start = datetime.strptime(args.start, '%Y-%m-%d').date()
+            date_end = datetime.strptime(args.end, '%Y-%m-%d').date()
+        else:
+            date_start = datetime.strptime(input("Enter first day (YYYY-MM-DD): "), '%Y-%m-%d').date()
+            date_end = datetime.strptime(input("Enter last day (YYYY-MM-DD): "), '%Y-%m-%d').date()
+        time_min = datetime.combine(date_start, time.min, tzinfo=timezone.utc).isoformat()
+        time_max = datetime.combine(date_end, time.max, tzinfo=timezone.utc).isoformat()
+    else:
+        # If no arguments, use interactive menu
+        print("\nTIMESPANS:")
+        print("1. Current day")
+        print("2. Current week")
+        print("3. Current month")
+        print("4. Current year")
+        print("5. Custom")
+
+        timespan_selector = int(input("\nSelect a timespan: "))
+
+        if timespan_selector == 1:
+            time_min = datetime.combine(today_utc, time.min, tzinfo=timezone.utc).isoformat()
+            time_max = datetime.combine(today_utc, time.max, tzinfo=timezone.utc).isoformat()
+        elif timespan_selector == 2:
+            week_start_utc = today_utc - timedelta(days=today_utc.weekday())
+            week_end_utc = week_start_utc + timedelta(days=6)
+            time_min = datetime.combine(week_start_utc, time.min, tzinfo=timezone.utc).isoformat()
+            time_max = datetime.combine(week_end_utc, time.max, tzinfo=timezone.utc).isoformat()
+        elif timespan_selector == 3:
+            month_start_utc = today_utc.replace(day=1)
+            _, month_end_utc_num = calendar.monthrange(today_utc.year, today_utc.month)
+            month_end_utc = today_utc.replace(day=month_end_utc_num)
+            time_min = datetime.combine(month_start_utc, time.min, tzinfo=timezone.utc).isoformat()
+            time_max = datetime.combine(month_end_utc, time.max, tzinfo=timezone.utc).isoformat()
+        elif timespan_selector == 4:
+            year_start_utc = date(today_utc.year, 1, 1)
+            year_end_utc = date(today_utc.year, 12, 31)
+            time_min = datetime.combine(year_start_utc, time.min, tzinfo=timezone.utc).isoformat()
+            time_max = datetime.combine(year_end_utc, time.max, tzinfo=timezone.utc).isoformat()
+        elif timespan_selector == 5:
+            date_start = datetime.strptime(input("Enter first day (YYYY-MM-DD): "), '%Y-%m-%d').date()
+            date_end = datetime.strptime(input("Enter last day (YYYY-MM-DD): "), '%Y-%m-%d').date()
+            time_min = datetime.combine(date_start, time.min, tzinfo=timezone.utc).isoformat()
+            time_max = datetime.combine(date_end, time.max, tzinfo=timezone.utc).isoformat()
+        else:
+            print("Invalid option.")
+            return None, None
+
+    return time_min, time_max
+
+
+def create_parser():
     parser = argparse.ArgumentParser(description="Calculate total time spent in Google Calendar events.")
     parser.add_argument("-d", "--day", action="store_true", help="Get current day events duration")
     parser.add_argument("-w", "--week", action="store_true", help="Get current week events duration")
@@ -80,7 +156,12 @@ def main():
     parser.add_argument("--end", type=str, help="End date for custom timespan (YYYY-MM-DD)")
     args = parser.parse_args()
     
+    return args
+
+
+def main():
     creds = get_google_credentials()
+    args = create_parser()
 
     try:
         service = build("calendar", "v3", credentials=creds)
@@ -99,58 +180,14 @@ def main():
         
         print("")
         
-        
         calendar_selector = 6       
         calendar_selector = int(input("Select a calendar: "))
 
-        # --- GET UPCOMING EVENTS FROM SELECTED CALENDAR ---
         # Constructor for retrieving desired timespan
-        today_utc = datetime.now(timezone.utc).date()
+        time_min, time_max = get_timespan(args)
         
-        print("\nTIMESPANS:")
-        print("1. Current day")
-        print("2. Current week")
-        print("3. Current month")
-        print("4. Current year")
-        print("5. Custom")
-        
-        # timespan_selector = 4           
-        timespan_selector = int(input("\nSelect a timespan: "))
-        
-        # TODAY
-        if timespan_selector == 1:
-            time_min = datetime.combine(today_utc, time.min, tzinfo=timezone.utc).isoformat()
-            time_max = datetime.combine(today_utc, time.max, tzinfo=timezone.utc).isoformat()
-        # THIS WEEK
-        elif timespan_selector == 2:
-            # First day of week = monday
-            week_start_utc = today_utc - timedelta(days=today_utc.weekday())
-            week_end_utc = week_start_utc + timedelta(days=6)
-            time_min = datetime.combine(week_start_utc, time.min, tzinfo=timezone.utc).isoformat()
-            time_max = datetime.combine(week_end_utc, time.max, tzinfo=timezone.utc).isoformat()
-        # THIS MONTH
-        elif timespan_selector == 3:
-            month_start_utc = today_utc.replace(day=1)
-            _, month_end_utc_num = calendar.monthrange(today_utc.year, today_utc.month)
-            month_end_utc = today_utc.replace(day=month_end_utc_num)
-            time_min = datetime.combine(month_start_utc, time.min, tzinfo=timezone.utc).isoformat()
-            time_max = datetime.combine(month_end_utc, time.max, tzinfo=timezone.utc).isoformat()
-        # THIS YEAR
-        elif timespan_selector == 4:
-            year_start_utc = date(today_utc.year, 1, 1)
-            year_end_utc = date(today_utc.year, 12, 31)
-            time_min = datetime.combine(year_start_utc, time.min, tzinfo=timezone.utc).isoformat()
-            time_max = datetime.combine(year_end_utc, time.max, tzinfo=timezone.utc).isoformat()
-        # CUSTOM
-        elif timespan_selector == 5:
-            date_start = datetime.strptime(input("Enter first day (YYYY-MM-DD): "), '%Y-%m-%d').date()
-            date_end = datetime.strptime(input("Enter last day (YYYY-MM-DD): "), '%Y-%m-%d').date()
-            time_min = datetime.combine(date_start, time.min, tzinfo=timezone.utc).isoformat()
-            time_max = datetime.combine(date_end, time.max, tzinfo=timezone.utc).isoformat()
-        else:
-            print("Invalid option.")
+        if not time_min or not time_max:
             return
-        
         
         events_result = (
             service.events()
@@ -169,7 +206,7 @@ def main():
             print("No events found.")
             return
         
-        # TODO: Print total duration
+        # Print total duration
         print("")
         total_seconds = 0.0
         for event in events:
