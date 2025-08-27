@@ -105,7 +105,7 @@ def get_timespan(args):
         year_end_utc = date(today_utc.year, 12, 31)
         time_min = datetime.combine(year_start_utc, time.min, tzinfo=timezone.utc).isoformat()
         time_max = datetime.combine(year_end_utc, time.max, tzinfo=timezone.utc).isoformat()
-    elif args.custom or (args.start and args.end) or timespan_selector == 5:
+    elif (args.start and args.end) or timespan_selector == 5:
         if args.start and args.end:
             date_start = datetime.strptime(args.start, '%Y-%m-%d').date()
             date_end = datetime.strptime(args.end, '%Y-%m-%d').date()
@@ -127,7 +127,6 @@ def create_parser():
     parser.add_argument("-w", "--week", action="store_true", help="Get current week events duration")
     parser.add_argument("-m", "--month", action="store_true", help="Get current month events duration")
     parser.add_argument("-y", "--year", action="store_true", help="Get current year events duration")
-    parser.add_argument("-c", "--custom", action="store_true", help="Select a custom timespan")
     parser.add_argument("--start", type=str, help="Start date for custom timespan (YYYY-MM-DD)")
     parser.add_argument("--end", type=str, help="End date for custom timespan (YYYY-MM-DD)")
     args = parser.parse_args()
@@ -156,8 +155,14 @@ def main():
         
         print("")
         
-        calendar_selector = 6       
-        calendar_selector = int(input("Select a calendar: "))
+        try:
+            calendar_selector = int(input("Select a calendar: "))
+            if calendar_selector not in calendars_id_map:
+                print("Invalid calendar selection")
+                return
+        except ValueError:
+            print("Please enter a valid number")
+            return
 
         # Constructor for retrieving desired timespan
         time_min, time_max = get_timespan(args)
@@ -190,8 +195,12 @@ def main():
         print(f"TOTAL EVENTS DURATION: {get_formatted_duration(total_seconds)}")
 
     except HttpError as error:
-        print(f"An error occurred: {error}")
-
+        if error.resp.status == 404:
+            print("Calendar not found")
+        elif error.resp.status == 401:
+            print("Authentication failed. Please delete token.json and re-authenticate")
+        else:
+            print(f"An error occurred: {error}")
 
 if __name__ == "__main__":
     main()
