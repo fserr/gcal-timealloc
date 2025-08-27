@@ -56,6 +56,8 @@ def get_google_credentials():
     token_path = config_dir / "token.json"
     credentials_path = config_dir / "credentials.json"
     
+    config_dir.mkdir(parents=True, exist_ok=True)
+    
     if not credentials_path.exists():
         source_credentials_path = Path("credentials.json")
         
