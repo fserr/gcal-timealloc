@@ -24,7 +24,7 @@ Ensure you have Python 3 installed on your system. The following Python packages
 ### 1. Clone the Repository
 First, clone this repository to your local machine:
 ```zsh
-git clone <your-repository-url>
+git clone https://github.com/fserr/gcal-timealloc.git
 cd gcal-timealloc
 ```
 
