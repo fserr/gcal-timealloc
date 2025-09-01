@@ -53,6 +53,78 @@ def get_formatted_duration(total_seconds: float):
         return "0 min" # For events with no duration
 
 
+def get_date_min_max(date_start: date, date_end: date):
+    """Returns a tuple of strings (from Date) representing end and start of an event formatted for GCal API"""
+    time_min = datetime.combine(date_start, time.min, tzinfo=timezone.utc).isoformat()
+    time_max = datetime.combine(date_end, time.max, tzinfo=timezone.utc).isoformat()
+    return time_min, time_max
+
+
+def get_timespan(args):
+    """
+    Returns a tuple of strings representing the start and end of a timespan formatted for the GCal \
+        API events retrieval
+    """
+    today_utc = datetime.now(timezone.utc).date()
+    time_min = None
+    time_max = None
+    timespan_selector = 0
+
+    # If no arguments, use interactive menu
+    if not args.day and not args.week and not args.month and not args.year and not args.start and not args.end:
+        print("TIMESPANS:\n\
+1. Current day:\n\
+2. Current week:\n\
+3. Current month:\n\
+4. Current year:\n\
+5. Custom:\n\
+        ")
+
+        timespan_selector = int(input("\nSelect a timespan: "))
+    
+    if args.day or timespan_selector == 1:
+        time_min, time_max = get_date_min_max(today_utc, today_utc)
+    elif args.week or timespan_selector == 2:
+        week_start_utc = today_utc - timedelta(days=today_utc.weekday())
+        week_end_utc = week_start_utc + timedelta(days=6)
+        time_min, time_max = get_date_min_max(week_start_utc, week_end_utc)
+    elif args.month or timespan_selector == 3:
+        month_start_utc = today_utc.replace(day=1)
+        _, month_end_utc_num = calendar.monthrange(today_utc.year, today_utc.month)
+        month_end_utc = today_utc.replace(day=month_end_utc_num)
+        time_min, time_max = get_date_min_max(month_start_utc, month_end_utc)
+    elif args.year or timespan_selector == 4:
+        year_start_utc = date(today_utc.year, 1, 1)
+        year_end_utc = date(today_utc.year, 12, 31)
+        time_min, time_max = get_date_min_max(year_start_utc, year_end_utc)
+    elif (args.start and args.end) or timespan_selector == 5:
+        if args.start and args.end:
+            date_start = datetime.strptime(args.start, '%Y-%m-%d').date()
+            date_end = datetime.strptime(args.end, '%Y-%m-%d').date()
+        else:
+            date_start = datetime.strptime(input("Enter first day (YYYY-MM-DD): "), '%Y-%m-%d').date()
+            date_end = datetime.strptime(input("Enter last day (YYYY-MM-DD): "), '%Y-%m-%d').date()
+        time_min, time_max = get_date_min_max(date_start, date_end)
+    else:
+        print("Invalid option.")
+        return None, None
+
+    return time_min, time_max
+
+
+def create_parser():
+    """ Create a parser """
+    parser = argparse.ArgumentParser(description="Calculate total time spent in Google Calendar events.")
+    parser.add_argument("-d", "--day", action="store_true", help="Get current day events duration")
+    parser.add_argument("-w", "--week", action="store_true", help="Get current week events duration")
+    parser.add_argument("-m", "--month", action="store_true", help="Get current month events duration")
+    parser.add_argument("-y", "--year", action="store_true", help="Get current year events duration")
+    parser.add_argument("--start", type=str, help="Start date for custom timespan (--start='<YYYY-MM-DD>')")
+    parser.add_argument("--end", type=str, help="End date for custom timespan (--end='<YYYY-MM-DD>')")
+    parser.add_argument("--id", type=str, help="Select calendar by calendar ID (--id='<ID>')")
+        
+    return parser.parse_args()
+
 def get_google_credentials():
     """
     Returns a Credentials object for Google Account authentication.\n
@@ -100,77 +172,66 @@ def get_google_credentials():
     return creds
 
 
-def get_date_min_max(date_start: date, date_end: date):
-    """Returns a tuple of strings (from Date) representing end and start of an event formatted for GCal API"""
-    time_min = datetime.combine(date_start, time.min, tzinfo=timezone.utc).isoformat()
-    time_max = datetime.combine(date_end, time.max, tzinfo=timezone.utc).isoformat()
-    return time_min, time_max
+def build_google_service(creds):
+    return build("calendar", "v3", credentials=creds)
 
-
-def get_timespan(args):
-    """
-    Returns a tuple of strings representing the start and end of a timespan formatted for the GCal \
-        API events retrieval
-    """
-    today_utc = datetime.now(timezone.utc).date()
-    time_min = None
-    time_max = None
-    timespan_selector = 0
-
-    # If no arguments, use interactive menu
-    if not args.day and not args.week and not args.month and not args.year and not args.start and not args.end:
-        print("TIMESPANS:\n\
-                1. Current day:\n\
-                2. Current week:\n\
-                3. Current month:\n\
-                4. Current year:\n\
-                5. Custom:\n\
-        ")
-
-        timespan_selector = int(input("\nSelect a timespan: "))
     
-    if args.day or timespan_selector == 1:
-        time_min, time_max = get_date_min_max(today_utc, today_utc)
-    elif args.week or timespan_selector == 2:
-        week_start_utc = today_utc - timedelta(days=today_utc.weekday())
-        week_end_utc = week_start_utc + timedelta(days=6)
-        time_min, time_max = get_date_min_max(week_start_utc, week_end_utc)
-    elif args.month or timespan_selector == 3:
-        month_start_utc = today_utc.replace(day=1)
-        _, month_end_utc_num = calendar.monthrange(today_utc.year, today_utc.month)
-        month_end_utc = today_utc.replace(day=month_end_utc_num)
-        time_min, time_max = get_date_min_max(month_start_utc, month_end_utc)
-    elif args.year or timespan_selector == 4:
-        year_start_utc = date(today_utc.year, 1, 1)
-        year_end_utc = date(today_utc.year, 12, 31)
-        time_min, time_max = get_date_min_max(year_start_utc, year_end_utc)
-    elif (args.start and args.end) or timespan_selector == 5:
-        if args.start and args.end:
-            date_start = datetime.strptime(args.start, '%Y-%m-%d').date()
-            date_end = datetime.strptime(args.end, '%Y-%m-%d').date()
-        else:
-            date_start = datetime.strptime(input("Enter first day (YYYY-MM-DD): "), '%Y-%m-%d').date()
-            date_end = datetime.strptime(input("Enter last day (YYYY-MM-DD): "), '%Y-%m-%d').date()
-        time_min, time_max = get_date_min_max(date_start, date_end)
+def get_calendars_list(creds):
+    service = build("calendar", "v3", credentials=creds)
+    calendars_result = service.calendarList().list().execute()
+    calendars = calendars_result.get("items", [])
+    return calendars
+
+
+# TODO print calendar IDs
+
+
+def get_calendar_id(calendars, args):
+    if args.id:
+        return args.id
     else:
-        print("Invalid option.")
-        return None, None
+        calendars_id_map = {}
+        cal_selector_constructor = 0
+        print("CALENDARS:")
+        for cal in calendars:
+            cal_selector_constructor += 1
+            calendars_id_map[cal_selector_constructor] = cal["id"]
+            print(f"{cal_selector_constructor}. {cal['summary']}")
+        print("")
+        
+        try:
+            calendar_selector = int(input("Select a calendar: "))
+            if calendar_selector not in calendars_id_map:
+                print("Invalid calendar selection")
+                return
+            else:
+                calendar_id = calendars_id_map[calendar_selector]
+                return calendar_id
+        except ValueError:
+            print("Please enter a valid number")
+            return
 
-    return time_min, time_max
+
+def get_events(service, calendar_id, time_min, time_max):
+    events_result = (
+        service.events()
+        .list(
+            calendarId=calendar_id,
+            timeMin=time_min,
+            timeMax=time_max,
+            singleEvents=True,
+            orderBy="startTime",
+        )
+        .execute()
+    )
+    return events_result.get("items", [])
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(description="Calculate total time spent in Google Calendar events.")
-    parser.add_argument("-d", "--day", action="store_true", help="Get current day events duration")
-    parser.add_argument("-w", "--week", action="store_true", help="Get current week events duration")
-    parser.add_argument("-m", "--month", action="store_true", help="Get current month events duration")
-    parser.add_argument("-y", "--year", action="store_true", help="Get current year events duration")
-    parser.add_argument("--start", type=str, help="Start date for custom timespan (--start='<YYYY-MM-DD>')")
-    parser.add_argument("--end", type=str, help="End date for custom timespan (--end='<YYYY-MM-DD>')")
-    parser.add_argument("--id", type=str, help="Select calendar by calendar ID (--id='<ID>')")
-    args = parser.parse_args()
-    
-    return args
+def print_total_duration(events):
+    total_seconds = 0.0
+    for event in events:
+        total_seconds = total_seconds + get_duration_seconds(event)
+    print(f"---\nTOTAL EVENTS DURATION:\n{get_formatted_duration(total_seconds)}")
 
 
 def main():
@@ -178,65 +239,21 @@ def main():
     args = create_parser()
 
     try:
-        service = build("calendar", "v3", credentials=creds)
-
-        # --- GET CALENDARS ---
-        calendars_result = service.calendarList().list().execute()
-        calendars = calendars_result.get("items", [])
-
-        calendars_id_map = {}
-        cal_selector_constructor = 0
-
-        if args.id:
-            calendar_id = args.id
-        else:
-            print("CALENDARS:")
-            for cal in calendars:
-                cal_selector_constructor += 1
-                calendars_id_map[cal_selector_constructor] = cal["id"]
-                print(f"{cal_selector_constructor}. {cal['summary']}")
-            print("")
-            
-            try:
-                calendar_selector = int(input("Select a calendar: "))
-                if calendar_selector not in calendars_id_map:
-                    print("Invalid calendar selection")
-                    return
-                else:
-                    calendar_id = calendars_id_map[calendar_selector]
-            except ValueError:
-                print("Please enter a valid number")
-                return
-
-        # Constructor for retrieving desired timespan
+        service = build_google_service(creds)
+        calendars = get_calendars_list(creds)
+        calendar_id = get_calendar_id(calendars, args)
         time_min, time_max = get_timespan(args)
         
         if not time_min or not time_max:
             return
         
-        events_result = (
-            service.events()
-            .list(
-                calendarId=calendar_id,
-                timeMin=time_min,
-                timeMax=time_max,
-                singleEvents=True,
-                orderBy="startTime",
-            )
-            .execute()
-        )
-        events = events_result.get("items", [])
+        events = get_events(service, calendar_id, time_min, time_max)
 
         if not events:
             print("No events found.")
             return
         
-        # Print total duration
-        print("---")
-        total_seconds = 0.0
-        for event in events:
-            total_seconds = total_seconds + get_duration_seconds(event)
-        print(f"TOTAL EVENTS DURATION:\n {get_formatted_duration(total_seconds)}")
+        print_total_duration(events)
 
         return 0
     
@@ -249,6 +266,7 @@ def main():
             print(f"An error occurred: {error}")
     
         return 1
+
 
 if __name__ == "__main__":
     code = main()
