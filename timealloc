@@ -68,15 +68,18 @@ def get_today_utc():
 def create_parser():
     """ Create a parser """
     parser = argparse.ArgumentParser(description="Calculate total time spent in Google Calendar events.")
+    parser_exclusive = parser.add_mutually_exclusive_group()
     
-    parser.add_argument("-d", "--day", action="store_true", help="Get current day events duration")
-    parser.add_argument("-w", "--week", action="store_true", help="Get current week events duration")
-    parser.add_argument("-m", "--month", action="store_true", help="Get current month events duration")
-    parser.add_argument("-y", "--year", action="store_true", help="Get current year events duration")
-    parser.add_argument("--start", type=str, help="Start date for custom timespan (--start='<YYYY-MM-DD>')")
+    parser_exclusive.add_argument("-d", "--day", action="store_true", help="Get current day events duration")
+    parser_exclusive.add_argument("-w", "--week", action="store_true", help="Get current week events duration")
+    parser_exclusive.add_argument("-m", "--month", action="store_true", help="Get current month events duration")
+    parser_exclusive.add_argument("-y", "--year", action="store_true", help="Get current year events duration")
+    parser_exclusive.add_argument("--start", type=str, help="Start date for custom timespan (--start='<YYYY-MM-DD>')")
+    
     parser.add_argument("--end", type=str, help="End date for custom timespan (--end='<YYYY-MM-DD>')")
-    parser.add_argument("--id", type=str, help="Select calendar by calendar ID (--id='<ID>')")
+    
     parser.add_argument("--get-ids", nargs='?', const=1, help="Get the gcal IDs associated to your calendars")
+    parser.add_argument("--id", type=str, help="Select calendar by calendar ID (--id='<ID>')")
     
     return parser.parse_args()
 
@@ -148,8 +151,8 @@ def print_calendars_id(calendars):
 
     for cal in calendars:
         print(f"{cal['summary']:<{col_width}}{cal['id']}")
-
-
+    
+    
 def get_calendar_id(calendars, args):
     if args.id:
         return args.id
@@ -219,6 +222,9 @@ def main():
         
         today = get_today_utc()
         date_start, date_end = None, None
+        if args.start and not args.end or args.end and not args.start:
+            print("Please specify both --start and --end flags.")
+            return
         if args.day or timespan_selector == 1:
             date_start, date_end = today, today
         elif args.week or timespan_selector == 2:
