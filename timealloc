@@ -146,7 +146,6 @@ def get_calendars_list(creds):
 # TODO print calendar IDs
 def print_calendars_id(calendars):
     max_len = max(len(cal['summary']) for cal in calendars)
-    print(max_len)
     col_width = max_len + 4
 
     for cal in calendars:
