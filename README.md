@@ -96,4 +96,5 @@ You will be prompted to select a calendar and a timespan from a menu.
 - `--id`: Select the desired calendar by its ID.
   - Example: `./timealloc --id='1234@group.calendar.google.com'`
 
-```
+- `--get-ids`: Print calendar IDs.
+  - Example: `./timealloc --get-ids`
