@@ -60,61 +60,15 @@ def get_date_min_max(date_start: date, date_end: date):
     return time_min, time_max
 
 
-def get_timespan(args):
-    """
-    Returns a tuple of strings representing the start and end of a timespan formatted for the GCal \
-        API events retrieval
-    """
-    today_utc = datetime.now(timezone.utc).date()
-    time_min = None
-    time_max = None
-    timespan_selector = 0
-
-    # If no arguments, use interactive menu
-    if not args.day and not args.week and not args.month and not args.year and not args.start and not args.end:
-        print("TIMESPANS:\n\
-1. Current day:\n\
-2. Current week:\n\
-3. Current month:\n\
-4. Current year:\n\
-5. Custom:\n\
-        ")
-
-        timespan_selector = int(input("\nSelect a timespan: "))
-    
-    if args.day or timespan_selector == 1:
-        time_min, time_max = get_date_min_max(today_utc, today_utc)
-    elif args.week or timespan_selector == 2:
-        week_start_utc = today_utc - timedelta(days=today_utc.weekday())
-        week_end_utc = week_start_utc + timedelta(days=6)
-        time_min, time_max = get_date_min_max(week_start_utc, week_end_utc)
-    elif args.month or timespan_selector == 3:
-        month_start_utc = today_utc.replace(day=1)
-        _, month_end_utc_num = calendar.monthrange(today_utc.year, today_utc.month)
-        month_end_utc = today_utc.replace(day=month_end_utc_num)
-        time_min, time_max = get_date_min_max(month_start_utc, month_end_utc)
-    elif args.year or timespan_selector == 4:
-        year_start_utc = date(today_utc.year, 1, 1)
-        year_end_utc = date(today_utc.year, 12, 31)
-        time_min, time_max = get_date_min_max(year_start_utc, year_end_utc)
-    elif (args.start and args.end) or timespan_selector == 5:
-        if args.start and args.end:
-            date_start = datetime.strptime(args.start, '%Y-%m-%d').date()
-            date_end = datetime.strptime(args.end, '%Y-%m-%d').date()
-        else:
-            date_start = datetime.strptime(input("Enter first day (YYYY-MM-DD): "), '%Y-%m-%d').date()
-            date_end = datetime.strptime(input("Enter last day (YYYY-MM-DD): "), '%Y-%m-%d').date()
-        time_min, time_max = get_date_min_max(date_start, date_end)
-    else:
-        print("Invalid option.")
-        return None, None
-
-    return time_min, time_max
+def get_today_utc():
+    """" Returns today 'datetime' object"""
+    return datetime.now(timezone.utc).date()
 
 
 def create_parser():
     """ Create a parser """
     parser = argparse.ArgumentParser(description="Calculate total time spent in Google Calendar events.")
+    
     parser.add_argument("-d", "--day", action="store_true", help="Get current day events duration")
     parser.add_argument("-w", "--week", action="store_true", help="Get current week events duration")
     parser.add_argument("-m", "--month", action="store_true", help="Get current month events duration")
@@ -122,9 +76,12 @@ def create_parser():
     parser.add_argument("--start", type=str, help="Start date for custom timespan (--start='<YYYY-MM-DD>')")
     parser.add_argument("--end", type=str, help="End date for custom timespan (--end='<YYYY-MM-DD>')")
     parser.add_argument("--id", type=str, help="Select calendar by calendar ID (--id='<ID>')")
-        
+    parser.add_argument("--get-ids", nargs='?', const=1, help="Get the gcal IDs associated to your calendars")
+    
     return parser.parse_args()
 
+
+# TODO: Auth directly without credentials.json
 def get_google_credentials():
     """
     Returns a Credentials object for Google Account authentication.\n
@@ -184,6 +141,12 @@ def get_calendars_list(creds):
 
 
 # TODO print calendar IDs
+def print_calendars_id(calendars):
+    max_len = max(len(cal['summary']) for cal in calendars)
+    col_width = max_len + 4
+
+    for cal in calendars:
+        print(f"{cal['summary']:<{col_width}}{cal['id']}")
 
 
 def get_calendar_id(calendars, args):
@@ -237,12 +200,52 @@ def print_total_duration(events):
 def main():
     creds = get_google_credentials()
     args = create_parser()
-
+        
     try:
         service = build_google_service(creds)
         calendars = get_calendars_list(creds)
+        
+        # Print ids and exit
+        if args.get_ids:
+            print_calendars_id(calendars)
+            return
+        
+        # If no arguments, use interactive menu
+        timespan_selector = -1
+        if not args.day and not args.week and not args.month and not args.year and not args.start and not args.end:
+            print("TIMESPANS:\n1. Current day:\n2. Current week:\n3. Current month:\n4. Current year:\n5. Custom:\n")
+            timespan_selector = int(input("\nSelect a timespan: "))
+        
+        today = get_today_utc()
+        date_start, date_end = None, None
+        if args.day or timespan_selector == 1:
+            date_start, date_end = today, today
+        elif args.week or timespan_selector == 2:
+            date_start = today.replace(day=1)
+            _, last_day = calendar.monthrange(today.year, today.month)
+            date_end = today.replace(day=last_day)
+        elif args.month or timespan_selector == 3:
+            date_start = date(today.year, 1, 1)
+            date_end = date(today.year, 12, 31)
+        elif args.year or timespan_selector == 4:
+            date_start = datetime.strptime(args.start, '%Y-%m-%d').date()
+            date_end = datetime.strptime(args.end, '%Y-%m-%d').date()
+        elif (args.start and args.end) or timespan_selector == 5:
+            if args.start and args.end:
+                date_start = datetime.strptime(args.start, '%Y-%m-%d').date()
+                date_end = datetime.strptime(args.end, '%Y-%m-%d').date()
+            else:
+                date_start = datetime.strptime(input("Enter first day (YYYY-MM-DD): "), '%Y-%m-%d').date()
+                date_end = datetime.strptime(input("Enter last day (YYYY-MM-DD): "), '%Y-%m-%d').date()
+        
+        if date_start != None and date_end != None:
+            time_min, time_max = get_date_min_max(date_start, date_end)
+        else:
+            print("No timespan specified. Please use a flag like --day, --week, or --start/--end.")
+            return
+        # ---
+        
         calendar_id = get_calendar_id(calendars, args)
-        time_min, time_max = get_timespan(args)
         
         if not time_min or not time_max:
             return
