@@ -138,8 +138,7 @@ def build_google_service(creds):
     return build("calendar", "v3", credentials=creds)
 
     
-def get_calendars_list(creds):
-    service = build("calendar", "v3", credentials=creds)
+def get_calendars_list(service):
     calendars_result = service.calendarList().list().execute()
     calendars = calendars_result.get("items", [])
     return calendars
@@ -160,10 +159,9 @@ def get_calendar_id(calendars, args):
         calendars_id_map = {}
         cal_selector_constructor = 0
         print("CALENDARS:")
-        for cal in calendars:
-            cal_selector_constructor += 1
-            calendars_id_map[cal_selector_constructor] = cal["id"]
-            print(f"{cal_selector_constructor}. {cal['summary']}")
+        for i, cal in enumerate(calendars, 1):
+            calendars_id_map[i] = cal["id"]
+            print(f"{i}. {cal['summary']}")
         print("")
         
         try:
@@ -207,7 +205,7 @@ def main():
         
     try:
         service = build_google_service(creds)
-        calendars = get_calendars_list(creds)
+        calendars = get_calendars_list(service)
         
         # Print ids and exit
         if args.get_ids:
