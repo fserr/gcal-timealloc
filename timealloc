@@ -217,8 +217,8 @@ def main():
         # If no arguments, use interactive menu
         timespan_selector = -1
         if not args.day and not args.week and not args.month and not args.year and not args.start and not args.end:
-            print("TIMESPANS:\n1. Current day:\n2. Current week:\n3. Current month:\n4. Current year:\n5. Custom:\n")
-            timespan_selector = int(input("\nSelect a timespan: "))
+            print("TIMESPANS\n1. Current day\n2. Current week\n3. Current month\n4. Current year\n5. Custom\n")
+            timespan_selector = int(input("Select a timespan: "))
         
         today = get_today_utc()
         date_start, date_end = None, None
@@ -278,6 +278,9 @@ def main():
 
     except httplib2.error.ServerNotFoundError as error:
         print(f"An error has occurred: {error}")
+        
+    except ValueError as error:
+        print(f"Please enter a correct date with the following format: 'YYYY-MM-DD'.")
 
 
 if __name__ == "__main__":
