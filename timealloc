@@ -228,15 +228,15 @@ def main():
         if args.day or timespan_selector == 1:
             date_start, date_end = today, today
         elif args.week or timespan_selector == 2:
-            date_start = today.replace(day=1)
-            _, last_day = calendar.monthrange(today.year, today.month)
-            date_end = today.replace(day=last_day)
+            date_start = today - timedelta(days=today.weekday())
+            date_end = date_start + timedelta(days=6)
         elif args.month or timespan_selector == 3:
+            date_start = today.replace(day=1)
+            _, date_end_num = calendar.monthrange(today.year, today.month)
+            date_end = today.replace(day=date_end_num)
+        elif args.year or timespan_selector == 4:
             date_start = date(today.year, 1, 1)
             date_end = date(today.year, 12, 31)
-        elif args.year or timespan_selector == 4:
-            date_start = datetime.strptime(args.start, '%Y-%m-%d').date()
-            date_end = datetime.strptime(args.end, '%Y-%m-%d').date()
         elif (args.start and args.end) or timespan_selector == 5:
             if args.start and args.end:
                 date_start = datetime.strptime(args.start, '%Y-%m-%d').date()
