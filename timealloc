@@ -85,7 +85,6 @@ def create_parser():
     return parser.parse_args()
 
 
-# TODO: Auth directly without credentials.json
 def get_google_credentials():
     """
     Returns a Credentials object for Google Account authentication.\n
@@ -218,6 +217,7 @@ def main():
         if not args.day and not args.week and not args.month and not args.year and not args.start and not args.end:
             print("TIMESPANS\n1. Current day\n2. Current week\n3. Current month\n4. Current year\n5. Custom\n")
             timespan_selector = int(input("Select a timespan: "))
+            print("")
         
         today = get_today_utc()
         date_start, date_end = None, None
@@ -286,7 +286,7 @@ def main():
         print(f"Please enter a correct date with the following format: 'YYYY-MM-DD'.")
         
     except AttributeError as e:
-        print(f"An error has occured: {e}.\nMake sure to start the program in a directory with a valid 'credentials.json' file")
+        print(f"An error has occured: {e}.\nThe first time you run the script make sure to start the program in a directory with a valid 'credentials.json' file")
 
 
 if __name__ == "__main__":
