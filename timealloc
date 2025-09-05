@@ -269,21 +269,24 @@ def main():
 
         return 0
     
-    except HttpError as error:
-        if error.resp.status == 404:
+    except HttpError as e:
+        if e.resp.status == 404:
             print("Calendar not found")
-        elif error.resp.status == 401:
+        elif e.resp.status == 401:
             print("Authentication failed. Please delete token.json and re-authenticate")
         else:
-            print(f"An error has occurred: {error}")
+            print(f"An error has occurred: {e}")
     
         return 1
 
-    except httplib2.error.ServerNotFoundError as error:
-        print(f"An error has occurred: {error}")
+    except httplib2.error.ServerNotFoundError as e:
+        print(f"An error has occurred: {e}")
         
-    except ValueError as error:
+    except ValueError as e:
         print(f"Please enter a correct date with the following format: 'YYYY-MM-DD'.")
+        
+    except AttributeError as e:
+        print(f"An error has occured: {e}.\nMake sure to start the program in a directory with a valid 'credentials.json' file")
 
 
 if __name__ == "__main__":
