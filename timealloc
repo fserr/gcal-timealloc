@@ -35,11 +35,11 @@ def get_duration_seconds(event) -> float:
 
     total_seconds = duration.total_seconds()
     return total_seconds
-    
-    
+
+
 def get_formatted_duration(total_seconds: float):
     """Returns a formatted string specifying an event duration in hours and minutes"""
-    
+
     hours = int(total_seconds // 3600)
     minutes = int((total_seconds % 3600) // 60)
 
@@ -51,7 +51,7 @@ def get_formatted_duration(total_seconds: float):
     elif minutes > 0:
         return f"{minutes} min"
     else:
-        return "0 min" # For events with no duration
+        return "0 min"  # For events with no duration
 
 
 def get_date_min_max(date_start: date, date_end: date):
@@ -109,7 +109,7 @@ def get_google_credentials():
             shutil.copy(source_credentials_path, credentials_path)
             print(f"Successfully copied credentials to '{credentials_path}'")
         else:
-            return "'credentials.json' file not found in the current directory"
+            raise FileNotFoundError("'credentials.json' file not found in the current directory")
         
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -133,10 +133,10 @@ def get_google_credentials():
 
 
 def build_google_service(creds):
-    """Return a service object to manate auth and calendars"""
+    """Return a service object to manage auth and calendars"""
     return build("calendar", "v3", credentials=creds)
 
-    
+
 def get_calendars_list(service):
     """Return a list of all the calendars in the service"""
     calendars_result = service.calendarList().list().execute()
@@ -162,17 +162,15 @@ def get_calendar_id(calendars):
         print(f"{i}. {cal['summary']}")
     print("")
     
-    try:
-        calendar_selector = int(input("Select a calendar: "))
-        if calendar_selector not in calendars_id_map:
-            print("Invalid calendar selection")
-            return
-        else:
-            calendar_id = calendars_id_map[calendar_selector]
-            return calendar_id
-    except ValueError:
-        print("Please enter a valid number")
+
+    calendar_selector = int(input("Select a calendar: "))
+    if calendar_selector not in calendars_id_map:
+        print("Invalid calendar selection")
         return
+    else:
+        calendar_id = calendars_id_map[calendar_selector]
+        return calendar_id
+
 
 
 def get_events(service, calendar_id, time_min, time_max):
@@ -200,10 +198,10 @@ def print_total_duration(events):
 
 
 def main():
-    args = create_parser()
-    creds = get_google_credentials()
-        
     try:
+        args = create_parser()
+        creds = get_google_credentials()
+            
         service = build_google_service(creds)
         calendars = get_calendars_list(service)
         
@@ -267,7 +265,9 @@ def main():
         
         print_total_duration(events)
 
-        return 0
+    except FileNotFoundError as e:
+        print(e)
+        return 1
     
     except HttpError as e:
         if e.resp.status == 404:
@@ -285,10 +285,14 @@ def main():
     except ValueError as e:
         print(f"Please enter a correct date with the following format: 'YYYY-MM-DD'.")
         
-    except AttributeError as e:
-        print(f"An error has occured: {e}.\nThe first time you run the script make sure to start the program in a directory with a valid 'credentials.json' file")
+    except KeyboardInterrupt as e:
+        return
+
 
 
 if __name__ == "__main__":
-    code = main()
-    sys.exit(code)
+    try:
+        main()
+    except Exception as error:
+        print(f"Unexpected error: {error}")
+        sys.exit(1)
