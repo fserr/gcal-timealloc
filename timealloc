@@ -69,18 +69,21 @@ def get_today_utc():
 def create_parser():
     """ Create a parser """
     parser = argparse.ArgumentParser(description="Calculate total time spent in Google Calendar events.")
-    parser_exclusive = parser.add_mutually_exclusive_group()
+    parser_exc_time = parser.add_mutually_exclusive_group()
+    parser_exc_select = parser.add_mutually_exclusive_group()
     
-    parser_exclusive.add_argument("-d", "--day", action="store_true", help="Get current day events duration")
-    parser_exclusive.add_argument("-w", "--week", action="store_true", help="Get current week events duration")
-    parser_exclusive.add_argument("-m", "--month", action="store_true", help="Get current month events duration")
-    parser_exclusive.add_argument("-y", "--year", action="store_true", help="Get current year events duration")
-    parser_exclusive.add_argument("--start", type=str, help="Start date for custom timespan (--start='<YYYY-MM-DD>')")
+    parser_exc_time.add_argument("-d", "--day", action="store_true", help="Get current day events duration")
+    parser_exc_time.add_argument("-w", "--week", action="store_true", help="Get current week events duration")
+    parser_exc_time.add_argument("-m", "--month", action="store_true", help="Get current month events duration")
+    parser_exc_time.add_argument("-y", "--year", action="store_true", help="Get current year events duration")
+    parser_exc_time.add_argument("--start", type=str, help="Start date for custom timespan (--start='<YYYY-MM-DD>')")
     
     parser.add_argument("--end", type=str, help="End date for custom timespan (--end='<YYYY-MM-DD>')")
     
+    parser_exc_select.add_argument("--id", type=str, help="Select calendar by calendar ID (--id='<ID>')")
+    parser_exc_select.add_argument("--name", type=str, help="Select calendar by calendar name (--name='<NAME>')")
+    
     parser.add_argument("--get-ids", nargs='?', const=1, help="Get the gcal IDs associated to your calendars")
-    parser.add_argument("--id", type=str, help="Select calendar by calendar ID (--id='<ID>')")
     
     return parser.parse_args()
 
@@ -144,13 +147,21 @@ def get_calendars_list(service):
     return calendars
 
 
+def get_cal_id_by_name(calendars, name):
+    """Return the calendar ID mapped to the name (str) passed"""
+    for cal in calendars:
+        if (cal['summary'] == name):
+            return cal['id']
+    raise ValueError(f"Calendar '{name}' not found.")
+
+
 def print_calendars_id(calendars):
     """"Print the id associated with the calendars"""
     max_len = max(len(cal['summary']) for cal in calendars)
     col_width = max_len + 4
 
     for cal in calendars:
-        print(f"{cal['summary']:<{col_width}}{cal['id']}")
+        print(f"{cal['summary']:<{col_width}}\t{cal['id']}")
     
 
 def get_calendar_id(calendars):
@@ -215,6 +226,8 @@ def main():
 
         if args.id:
             calendar_id = args.id
+        elif args.name:
+            calendar_id = get_cal_id_by_name(calendars, args.name)
         else:
             calendar_id = get_calendar_id(calendars)
 
@@ -285,7 +298,8 @@ def main():
         print(f"An error has occurred: {e}")
         
     except ValueError as e:
-        print(f"Please enter a correct date with the following format: 'YYYY-MM-DD'.")
+        print(e)
+        #print(f"Please enter a correct date with the following format: 'YYYY-MM-DD'.")
         
     except KeyboardInterrupt as e:
         return
