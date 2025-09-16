@@ -77,11 +77,11 @@ def create_parser():
     parser_exc_time.add_argument("-m", "--month", action="store_true", help="Get current month events duration")
     parser_exc_time.add_argument("-y", "--year", action="store_true", help="Get current year events duration")
     parser_exc_time.add_argument("--start", type=str, help="Start date for custom timespan (--start='<YYYY-MM-DD>')")
-    
+    # exclusiveness managed via '--start'
     parser.add_argument("--end", type=str, help="End date for custom timespan (--end='<YYYY-MM-DD>')")
     
     parser_exc_select.add_argument("--id", type=str, help="Select calendar by calendar ID (--id='<ID>')")
-    parser_exc_select.add_argument("--name", type=str, help="Select calendar by calendar name (--name='<NAME>')")
+    parser_exc_select.add_argument("-n", "--name", type=str, help="Select calendar by calendar name (--name='<NAME>')")
     
     parser.add_argument("--get-ids", nargs='?', const=1, help="Get the gcal IDs associated to your calendars")
     
@@ -160,6 +160,7 @@ def print_calendars_id(calendars):
     max_len = max(len(cal['summary']) for cal in calendars)
     col_width = max_len + 4
 
+    print(f"{'NAME':<{col_width}}\t{'ID'}")
     for cal in calendars:
         print(f"{cal['summary']:<{col_width}}\t{cal['id']}")
     
