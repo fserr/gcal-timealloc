@@ -1,100 +1,64 @@
-# TimeAlloc
-**TimeAlloc** is a command-line tool that connects to your Google Calendar account to calculate the total time spent in events for a selected calendar and timeframe. You can run it interactively or use command-line arguments for quick calculations.
+## TimeAlloc
+**TimeAlloc** is a command-line utility written in Python that calculates the total duration of events in a Google Calendar within a specified timeframe. It ignores all-day events and supports both interactive and argument-based execution.
 
-## Overview
-
-* **Secure Google Account Authentication:** Uses OAuth 2.0 to securely access your calendar data.
-* **Multiple Calendar Support:** Automatically lists all your available Google Calendars for you to choose from.
-* **Flexible Timespan Options:** Calculate event durations for today, this week, this month, or this year.
-* **Custom Date Ranges:** Specify a custom start and end date for your calculation.
-* **Dual Mode Operation:** Use the script in an interactive mode or directly with command-line arguments for faster use and scripting.
-
-## Requirements
-
-Ensure you have Python 3 installed on your system. The following Python packages are required (and provided by the requirments.txt file):
-
+## Dependencies
+The script requires Python 3 and the Google API client libraries.
+```zsh
+pip install -r requirements.txt
+```
+Dependencies listed in requirements.txt:
 * `google-api-python-client`
 * `google-auth-httplib2`
 * `google-auth-oauthlib`
 
-## Setup Instructions
+The script has been tested with Python 3.12.11.
 
-### 1. Clone the Repository
-First, clone this repository to your local machine:
-```zsh
-git clone https://github.com/fserr/gcal-timealloc.git
-cd gcal-timealloc
-```
+## Setup
+To use the tool, you must obtain OAuth 2.0 credentials from Google.
+1. Create a project in the [Google Cloud Console](https://console.cloud.google.com/).
+2. Enable the Google Calendar API.
+3. Create OAuth client ID credentials (application type: Desktop app).
+4. Download the JSON file, rename it to credentials.json, and place it in the project root.
 
-### 2. Set Up Google API Credentials
-This tool requires API credentials to access the Google Calendar API.
-
-1.  Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2.  Create a new project.
-3.  From the navigation menu, go to **APIs & Services > Library** and enable the **Google Calendar API**.
-4.  Go to **APIs & Services > Credentials**.
-5.  Click **Create Credentials > OAuth client ID**.
-6.  Select **Desktop app** as the application type.
-7.  Click **Create**, then click **Download JSON** to download your credentials.
-8.  **Rename the downloaded file to `credentials.json`** and place it in the root directory of this project.
-
-### 3. Install Dependencies
-Install the required Python packages using `pip`:
-```zsh
-pip install -r requirements.txt
-```
-
-### 4. Make the Script Executable
-Give the script execution permissions:
+## Usage
+Make the script executable:
 ```zsh
 chmod +x timealloc
 ```
 
-### 5. (Optional) Add to Your PATH
-For easy access from any directory, you can add the script to your system's PATH.
+#### Authentication
+On the first run, the script will open a browser window to authenticate with your Google account. It creates a `~/.config/timealloc/token.json` file to store the session tokens for future executions.
+
+#### Interactive Mode
+Run without arguments to select a calendar and timeframe via a menu.
+
+#### CLI Mode
+You can pass arguments to skip the interactive menu.
+
+Timeframes:
+* `-d`, `--day`: Current day.
+* `-w`, `--week`: Current week.
+* `-m`, `--month`: Current month.
+* `-y`, `--year`: Current year.
+* `--start`, `--end`: Custom range (format: YYYY-MM-DD).
+
+Calendar Selection:
+* `--id <ID>`: Select calendar by ID.
+* `-n`, `--name <NAME>`: Select calendar by summary name.
+* `--get-ids`: List available calendars and their IDs.
+
+### Examples
+Calculate total time for the current week:
 ```zsh
-# Add this line to your ~/.bashrc, ~/.zshrc, or other shell configuration file
-export PATH="/path/to/gcal-timealloc:$PATH"
-
-# Then, reload your shell configuration
-source ~/.zshrc
-# OR
-source ~/.bashrc
+./timealloc -w
 ```
 
-After this, you can run the tool by simply typing timealloc.
-
-## How to Use
-
-### First Run: Authentication
-The first time you run the script, a browser window will open asking you to log in to your Google account and grant permission for the application to read your calendar data. After you approve, a `token.json` file will be created in the `~/.config/timealloc` directory (which will be created if not existent). This file stores your authentication tokens so you won't have to log in every time.
-
-### Interactive Mode
-To use the script interactively, run it without any arguments:
-```bash
-timealloc
+Calculate time for a specific date range on a specific calendar:
+```zsh
+./timealloc --name "Work" --start "2023-01-01" --end "2023-01-31"
 ```
 
-You will be prompted to select a calendar and a timespan from a menu.
-
-### Command-Line Arguments
-- `-d`, `--day`: Get the total duration for the current day.
-  - Example: `./timealloc -d`
-
-- `-w`, `--week`: Get the total duration for the current week.
-  - Example: `./timealloc -w`
-
-- `-m`, `--month`: Get the total duration for the current month.
-  - Example: `./timealloc -m`
-
-- `-y`, `--year`: Get the total duration for the current year.
-  - Example: `./timealloc -y`
-
-- `--start` & `--end`: Specify a custom date range directly.
-  - Example: `./timealloc --start='2025-01-01' --end='2025-01-31'`
-
-- `--id`: Select the desired calendar by its ID.
-  - Example: `./timealloc --id='1234@group.calendar.google.com'`
-
-- `--get-ids`: Print calendar IDs.
-  - Example: `./timealloc --get-ids`
+List all calendar IDs:
+```zsh
+./timealloc --get-ids
+```
