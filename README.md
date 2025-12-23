@@ -47,6 +47,9 @@ Calendar Selection:
 * `-n`, `--name <NAME>`: Select calendar by summary name.
 * `--get-ids`: List available calendars and their IDs.
 
+Output Options:
+* `-e`, `--events`: Group events by name and show duration.
+
 ### Examples
 Calculate total time for the current week:
 ```zsh
@@ -61,4 +64,9 @@ Calculate time for a specific date range on a specific calendar:
 List all calendar IDs:
 ```zsh
 ./timealloc --get-ids
+```
+
+Group events by name and show duration:
+```zsh
+./timealloc -m -e
 ```
