@@ -83,6 +83,7 @@ def create_parser():
     parser_exc_select.add_argument("--id", type=str, help="Select calendar by calendar ID (--id='<ID>')")
     parser_exc_select.add_argument("-n", "--name", type=str, help="Select calendar by calendar name (--name='<NAME>')")
     
+    parser.add_argument("-e", "--events", action="store_true", help="Group events by name and show duration")
     parser.add_argument("--get-ids", nargs='?', const=1, help="Get the gcal IDs associated to your calendars")
     
     return parser.parse_args()
@@ -210,6 +211,47 @@ def print_total_duration(events):
     print(f"---\nTOTAL EVENTS DURATION:\n{get_formatted_duration(total_seconds)}")
 
 
+def print_grouped_events_duration(events):
+    """
+    Print the grouped events by name and their duration.
+    """
+    
+    # 1. Group events by summary and calculate total duration for each group
+    events_duration = {}
+    total_seconds_all = 0.0
+
+    for event in events:
+        summary = event.get('summary', '(No Title)')
+        duration = get_duration_seconds(event)
+        
+        if duration > 0:
+            if summary in events_duration:
+                events_duration[summary] += duration
+            else:
+                events_duration[summary] = duration
+            total_seconds_all += duration
+
+    # 2. Sort by duration descending
+    sorted_events = sorted(events_duration.items(), key=lambda item: item[1], reverse=True)
+
+    # 3. Print Header with total duration
+    print(f"---\nTOTAL EVENTS DURATION:\n{get_formatted_duration(total_seconds_all)}\n")
+    
+    # 4. Print detailed list
+    print("EVENTS:")
+    
+    # Calculate max length for alignment
+    if not sorted_events:
+        return
+
+    max_len = max(len(name) for name, _ in sorted_events)
+    col_width = max_len + 4
+
+    for name, duration in sorted_events:
+        formatted_time = get_formatted_duration(duration)
+        print(f"* {name:<{col_width}}{formatted_time}")
+
+
 def main():
     try:
         args = create_parser()
@@ -279,7 +321,10 @@ def main():
             print("No events found.")
             return
         
-        print_total_duration(events)
+        if args.events:
+            print_grouped_events_duration(events)
+        else:
+            print_total_duration(events)
 
     except FileNotFoundError as e:
         print(e)
